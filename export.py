@@ -10,6 +10,7 @@ import logging
 import lxml.html
 import os
 import re
+import requests
 from collections import namedtuple
 
 Emoji = namedtuple('Emoji', 'url name extension')
@@ -165,11 +166,12 @@ async def main():
         if len(emojis) == 0:
             raise Exception('Failed to find any custom emoji')
 
-        function_http_get = concurrent_http_get(args.concurrent_requests, session)
-
-        for future in asyncio.as_completed([function_http_get(emoji) for emoji in emojis]):
-            emoji, data = await future
-            save_to_file(data, emoji, args.directory)
+        for emoji in emojis:
+            response = requests.get(emoji.url)
+            if response.status_code == 200:
+                save_to_file(response.content, emoji, args.directory)
+            else:
+                print(">> skipping emoji %s" % emoji.name)
 
         logger.info(f"Exported {len(emojis)} custom emoji to directory '{args.directory}'")
 
